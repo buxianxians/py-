@@ -1,0 +1,76 @@
+import requests
+import hashlib
+import time
+import random
+import jsonpath
+import re
+#更新cookies:  E:update cookies
+def requests_(i):
+    url = 'https://fanyi.youdao.com/translate_o?smartresult=dict&smartresult=rule'
+    headers = {'User-Agent':"Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)",
+               'Referer':'https://fanyi.youdao.com/',
+               'Cookie':'OUTFOX_SEARCH_USER_ID=-615291759@10.108.160.102; OUTFOX_SEARCH_USER_ID_NCOO=1599185544.4082453; JSESSIONID=aaaLzx8MKLtwcfgsByqMx; ___rl__test__cookies=1621625005930'}
+    lts = str(int(time.time()*1000))
+    salt = lts+str(random.randint(1,10))
+    str_md5 = "fanyideskweb" + i + salt + "Tbh5E8=q6U3EXe+&L[4c@"
+    sign = hashlib.md5(str_md5.encode('utf-8')).hexdigest()
+    data = {
+        'i': i,
+        'from': 'AUTO',
+        'to': 'AUTO',
+        'smartresult': 'dict',
+        'client': 'fanyideskweb',
+        'salt': salt,
+        'sign': sign,
+        'lts': lts,
+        'bv': '9ff8102373b1562471f4b6881a5653e9',
+        'doctype': 'json',
+        'version': '2.1',
+        'keyfrom': 'fanyi.web',
+        'action': 'FY_BY_REALTlME'
+    }
+    result = requests.post(url = url,headers=headers,data=data).json()
+    result_s = jsonpath.jsonpath(result,"$..tgt")
+    result_s = list(map(lambda x:x+'\n',result_s))
+    end_result = ''.join(result_s)
+    return end_result
+#文本翻译
+def translate_all(file_name):
+    with open(f'./{file_name}','r',encoding='utf-8') as f:
+        text = f.read()
+    tran_txt = requests_(text)
+    return tran_txt
+def translate_py(file_name):
+    # 此处应填你包的路径  should write your site-packages path
+    site_packages_path = [r"C:/Users/ice/PycharmProjects/pycharm/venv/lib/site-packages/",
+                          r"C:/Users/ice/AppData/Local/Programs/Python/Python38/Lib/"]
+    for path_pack in site_packages_path:
+        try:
+            path = f"{path_pack}{file_name}"
+            with open(path, 'r', encoding='utf-8') as f:
+                text = f.read()
+            break
+        except:
+            continue
+    res = """\"\"\"(.*?)\"\"\""""
+    go_trans_s = re.findall(res,text,re.S)
+    result = []
+    for go_trans in go_trans_s:
+        result.append(requests_(go_trans))
+    num = 0
+    for index in range(len(go_trans_s)):
+        text = text.replace(go_trans_s[index],result[index])
+    return text
+#保存文件
+def save_(file_name,data):
+    with open(f'./tran_{file_name}', 'w', encoding='utf-8') as f:
+        f.write(data)
+#主函数
+def main(file_name):
+    if file_name.endswith('py'):
+       data = translate_py(file_name)
+    else:
+       data = translate_all(file_name)
+    save_(file_name,data)
+file_name = input('输入文件名:')
+main(file_name)
